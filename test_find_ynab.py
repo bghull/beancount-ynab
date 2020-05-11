@@ -7,40 +7,29 @@ import find_ynab
 from conftest import Vars
 
 
-# Happy path testing for existing functions
-def test_get_datadir(ynab4file):
-    result = find_ynab.get_datadir(ynab4file["home"])
-    assert result == str(ynab4file["home"] / Vars.DATA_FOLDER)
+def test_find_budget_happy_path(ynab4file):
+    result = find_ynab.find_budget(ynab4file["home"])
+    assert result == ynab4file["home"] / Vars.DATA_FOLDER / Vars.BUDGET_FOLDER / "Budget.yfull"
 
 
-def test_get_devices(ynab4file, devices):
-    result = find_ynab.get_devices(ynab4file["data"])
-    assert result == devices
+@pytest.mark.skip
+def test_find_budget_wrong_version(ynab4file):
+    (ynab4file["home"] / "Budget.ymeta").write_text(
+        '{\n\t"formatVersion": "1.2",\n'
+        f'\t"relativeDataFolderName": "{Vars.DATA_FOLDER}",\n'
+        '\t"TED": 17347566400000\n}'
+    )
+    with pytest.raises(SystemExit):
+        result = find_ynab.find_budget(ynab4file["home"])
 
 
-def test_extract_knowledge(devices, devices_knowledge):
-    for d in devices:
-        result = find_ynab.extract_knowledge(devices[d])
-        assert result == devices_knowledge[d]
+def test_find_budget_missing_ymeta(ynab4file):
+    (ynab4file["home"] / "Budget.ymeta").unlink()
+    with pytest.raises(SystemExit):
+        result = find_ynab.find_budget(ynab4file["home"])
 
 
-def test_get_knowledge(devices, devices_knowledge):
-    result = find_ynab.get_knowledge(devices)
-    assert result == devices_knowledge
-
-
-def test_get_highest_knowledge(devices_knowledge, highest_knowledge):
-    result = find_ynab.get_highest_knowledge(devices_knowledge)
-    assert result == highest_knowledge
-
-
-@pytest.mark.xfail
-def test_find_devices_with_full_knowledge(devices, highest_knowledge):
-    result = find_ynab.find_devices_with_full_knowledge(devices, highest_knowledge)
-    assert result == ["A"]
-
-
-@pytest.mark.xfail
-def test_get_budget_filename(ynab4file):
-    result = find_ynab.get_budget_filename(ynab4file["home"])
-    assert result == str(ynab4file["budget"] / "Budget.yfull")
+def test_find_budget_missing_ybudget(ynab4file):
+    (ynab4file["budget"] / "Budget.yfull").unlink()
+    with pytest.raises(SystemExit):
+        result = find_ynab.find_budget(ynab4file["home"])
